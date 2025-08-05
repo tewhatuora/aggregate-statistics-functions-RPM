@@ -3,7 +3,7 @@
 A collection of functions for statistical analysis of numerical data with support for confidence intervals, percentiles, range analysis, and time-based episode detection.
 
 ## Requirements
-- Python 3.12
+- Python 3.10 - 3.12
 - See `requirements.txt` for package dependencies
 
 ## Quick Setup
