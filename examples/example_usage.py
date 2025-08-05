@@ -107,8 +107,13 @@ def main():
     ]
     
     band_stats = analyze_band_based_range(data, bands)
+    
     for band_name, stats_data in band_stats.items():
-        print(f"{band_name:10}: {stats_data['count']:3d} readings ({stats_data['percentage']:4.1f}%)")
+        if isinstance(stats_data, dict) and 'count' in stats_data:
+            print(f"{band_name:10}: {stats_data['count']:3d} readings ({stats_data['percentage']:4.1f}%)")
+    
+    if 'overlap_warning' in band_stats:
+        print(f"\nNote: {band_stats['overlap_warning']}")
     print()
     
     print("7. DATA DOWNSAMPLING (1000 → 50 points)")
