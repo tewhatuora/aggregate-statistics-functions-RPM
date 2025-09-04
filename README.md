@@ -1,174 +1,259 @@
 # Statistics Calculator
 
-A collection of functions for statistical analysis of numerical data with support for confidence intervals, percentiles, range analysis, and time-based episode detection.
+A Python library for statistical analysis of numerical data with support for percentiles, reference ranges, autocorrelated time series, and data preprocessing.
+
+## Features
+
+- **Percentile Analysis**: Calculate percentiles and interquartile ranges
+- **Reference Range Analysis**: Analyze data distribution across specified ranges and zones
+- **Autocorrelated Time Series**: Statistical analysis accounting for temporal dependencies
+- **Data Preprocessing**: Data cleaning and intelligent downsampling
 
 ## Requirements
-- Python 3.10 - 3.12
-- See `requirements.txt` for package dependencies
 
-## Quick Setup
+- Python 3.10 - 3.12
+- numpy >= 1.21.0
+- pandas >= 1.3.0
+- scipy >= 1.7.0
+- lttb >= 0.3.2 (optional, for downsampling)
+
+## Installation
 
 ```bash
-git clone https://github.com/tewhatuora/aggregate-statistics-functions-RPM.git
-cd aggregate-statistics-functions-RPM
+git clone <your-repository-url>
+cd stats-calculator
 pip install -r requirements.txt
 
-# For development/testing
+# For development
 pip install -r requirements-dev.txt
 ```
 
 ## Quick Start
 
 ```python
-from stats_calculator import calculate_general_stats, calculate_confidence_interval, analyze_all
 import numpy as np
+from stats_calculator import (
+    calculate_percentiles,
+    analyze_range,
+    autocorrelated_mean
+)
 
-# Your data (example with 1000 points)
-np.random.seed(42)
-data = np.random.normal(100, 15, 1000).tolist()
+# Sample data
+data = np.random.normal(100, 15, 200).tolist()
 
-# Get comprehensive statistics
-stats = calculate_general_stats(data)
-print(f"Mean: {stats['mean']:.2f} ± {stats['std_dev']:.2f}")
+# Calculate percentiles
+percentiles = calculate_percentiles(data, [25, 50, 75, 95])
+print(percentiles["percentiles"]["p50"])  # Median
 
-# Get confidence interval
-ci = calculate_confidence_interval(data, 0.95)
-print(f"95% CI: [{ci['lower_bound']:.2f}, {ci['upper_bound']:.2f}]")
+# Analyze reference range
+range_analysis = analyze_range(data, 80, 120)
+print(f"In range: {range_analysis['in_range']['percentage']:.1f}%")
 
-# All-in-one analysis
-results = analyze_all(data, confidence_level=0.95, percentiles=[25, 50, 75, 95])
+# Autocorrelated mean
+mean_result = autocorrelated_mean(data, 0.95)
+print(f"Mean: {mean_result['value']:.1f}")
 ```
 
 ## Available Functions
 
 ### General Statistics
-```python
-from stats_calculator import calculate_general_stats
 
-stats = calculate_general_stats(data)
-# Returns: count, mean, median, min, max, iqr, variance, std_dev, std_error, skewness, kurtosis
+**`calculate_percentiles(data, percentiles=[25, 50, 75])`**
+
+- Calculate specified percentiles from data
+- Returns: Dictionary with percentiles and sample size
+
+**`calculate_iqr(data)`**
+
+- Calculate Q1, median, Q3, IQR, and outlier bounds
+- Returns: Dictionary with quartile statistics
+
+### Reference Range Analysis
+
+**`analyze_range(data, lower_bound, upper_bound)`**
+
+- Analyze values relative to a reference range
+- Returns: Counts and percentages for below/within/above range
+
+**`analyze_zones(data, zones, allow_overlaps=False)`**
+
+- Analyze data distribution across multiple zones
+- Zones format: `[("name", lower, upper), ...]`
+- Returns: Count and percentage for each zone
+
+**`analyze_multiple_ranges(data, ranges)`**
+
+- Compare data against multiple reference ranges
+- Ranges format: `{"name": (lower, upper), ...}`
+- Returns: Analysis for each range
+
+**`get_outliers(data, lower_bound, upper_bound)`**
+
+- Extract outlier values outside specified bounds
+- Returns: Lists of outlier values
+
+### Autocorrelated Time Series
+
+**`autocorrelated_mean(data, confidence_level=0.95)`**
+
+- Mean with autocorrelation-adjusted confidence intervals
+- Accounts for temporal dependencies in time series data
+- Returns: Mean, CI bounds, autocorrelation coefficient, effective sample size
+
+**`autocorrelated_median(data, confidence_level=0.95)`**
+
+- Median using block bootstrap for autocorrelated data
+- Returns: Median, CI bounds, method details
+
+**`autocorrelated_std(data, confidence_level=0.95)`**
+
+- Standard deviation with confidence intervals and sigma bands
+- Returns: Std dev, CI bounds, sigma bands (1σ, 2σ, 3σ)
+
+### Data Preprocessing
+
+**`clean_data(data)`**
+
+- Remove NaN values and convert to numpy array
+- Accepts lists, numpy arrays, pandas Series
+
+**`downsample_data(data, timestamps=None, target_points=100)`**
+
+- Reduce dataset size using LTTB algorithm
+- Preserves data structure while compressing
+- Optional timestamp handling for time series
+
+## Usage Examples
+
+### Basic Statistics
+
+```python
+from stats_calculator import calculate_percentiles, calculate_iqr
+
+data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# Percentiles
+result = calculate_percentiles(data, [10, 50, 90])
+print(result["percentiles"])
+
+# IQR with outlier detection
+iqr_result = calculate_iqr(data)
+print(f"IQR: {iqr_result['iqr']}")
+print(f"Outlier bounds: {iqr_result['outlier_bounds']}")
 ```
 
-### Confidence Intervals
-```python
-from stats_calculator import calculate_confidence_interval
+### Range Analysis
 
-ci = calculate_confidence_interval(data, 0.95)  # 95% confidence
-# Returns: confidence_level, mean, std_error, z_score, margin_of_error, lower_bound, upper_bound
+```python
+from stats_calculator import analyze_range, analyze_zones
+
+data = list(range(1, 101))  # 1 to 100
+
+# Single range
+range_result = analyze_range(data, 25, 75)
+print(f"In range: {range_result['in_range']['count']} values")
+
+# Multiple zones
+zones = [("Low", 1, 33), ("Mid", 34, 66), ("High", 67, 100)]
+zone_result = analyze_zones(data, zones)
+for zone, stats in zone_result["zones"].items():
+    print(f"{zone}: {stats['percentage']:.1f}%")
 ```
 
-### Percentiles
-```python
-from stats_calculator import calculate_percentiles
+### Time Series Analysis
 
-percentiles = calculate_percentiles(data, [5, 25, 50, 75, 95])
-# Returns: {"p5": 73.21, "p25": 89.87, "p50": 99.34, "p75": 109.23, "p95": 125.18}
+```python
+from stats_calculator import autocorrelated_mean, autocorrelated_std
+
+# Generate autocorrelated data
+data = [50]
+for i in range(1, 100):
+    data.append(0.7 * data[i-1] + 0.3 * 50 + np.random.normal(0, 2))
+
+# Analyze with autocorrelation adjustment
+mean_result = autocorrelated_mean(data, 0.95)
+std_result = autocorrelated_std(data, 0.95)
+
+print(f"Mean: {mean_result['value']:.1f}")
+print(f"Autocorrelation: {mean_result['lag1_autocorrelation']:.3f}")
+print(f"Effective N: {mean_result['effective_n']} (from {mean_result['n_observations']})")
 ```
 
-### Value-Based Range Analysis
-```python
-from stats_calculator import analyze_value_based_range
+### Data Preprocessing
 
-# Analyze values outside normal range (85-115)
-range_analysis = analyze_value_based_range(data, 85, 115)
-# Returns: count, percentage, and deviation statistics for values outside range
-print(f"Below range: {range_analysis['below_range']['count']} ({range_analysis['below_range']['percentage']:.1f}%)")
-```
-
-### Time-Based Episode Analysis
 ```python
+from stats_calculator import clean_data, downsample_data
 import pandas as pd
-from stats_calculator import analyze_time_based_range
 
-timestamps = pd.date_range('2024-01-01', periods=len(data), freq='1min')
-episodes = analyze_time_based_range(data, timestamps, 85, 115, 'minutes')
-# Returns: episode count, duration statistics, peak/trough values
-print(f"Episodes above range: {episodes['above_range']['episode_count']}")
-print(f"Total time above: {episodes['above_range']['total_duration']:.1f} minutes")
+# Clean data with NaN values
+messy_data = [1, 2, np.nan, 4, 5, np.nan, 7]
+clean_array = clean_data(messy_data)
+
+# Downsample large dataset
+large_data = list(range(1000))
+timestamps = pd.date_range('2024-01-01', periods=1000, freq='1min')
+
+downsampled = downsample_data(large_data, timestamps, target_points=50)
+print(f"Reduced from {downsampled['original_points']} to {downsampled['actual_points']} points")
 ```
 
-### Band/Zone Analysis
+## Error Handling
+
+All functions return error dictionaries for invalid inputs:
+
 ```python
-from stats_calculator import analyze_band_based_range
-
-bands = [
-    ("Very Low", 0, 70),
-    ("Low", 70, 85), 
-    ("Normal", 85, 115),
-    ("High", 115, 130),
-    ("Very High", 130, 200)
-]
-band_stats = analyze_band_based_range(data, bands)
-# Returns: count and percentage for each band
-for band_name, stats in band_stats.items():
-    print(f"{band_name}: {stats['count']} values ({stats['percentage']:.1f}%)")
+result = calculate_percentiles([], [25, 50, 75])
+if "error" in result:
+    print(f"Error: {result['error']}")
 ```
 
-### Data Downsampling
-```python
-from stats_calculator import downsample_data
+## Data Types
 
-# Reduce large dataset using LTTB algorithm
-downsampled = downsample_data(data, timestamps, target_points=50)
-print(f"Reduced {downsampled['original_points']} to {len(downsampled['downsampled_data'])} points")
-```
+- **Input**: Lists, numpy arrays, pandas Series
+- **Output**: JSON-serializable dictionaries
+- **Missing Data**: Automatically handled with `clean_data()`
 
-### All-in-One Analysis
-```python
-from stats_calculator import analyze_all
-
-# Get all analysis in one call
-results = analyze_all(data, confidence_level=0.95, percentiles=[25, 50, 75, 95])
-# Returns: general stats, confidence interval, and percentiles combined
-```
-
-## Usage Example
-
-See `examples/example_usage.py`:
+## Testing
 
 ```bash
-python examples/example_usage.py
-```
+# Run all tests
+pytest tests/
 
-**Output includes:**
-- General statistics (mean, std dev, skewness, etc.)
-- Confidence intervals (95%, 99%)
-- Percentile analysis
-- Range analysis with deviation statistics
-- Time-based episode detection
-- Band/zone classification
-- Data downsampling demonstration
-- JSON serialization example
+# Run with coverage
+pytest --cov=stats_calculator tests/
 
-## Running Tests
-
-```bash
-python -m pytest tests/     
-```
-
-## JSON Serialization
-
-All function outputs are JSON-serializable:
-
-```python
-import json
-results = calculate_general_stats(data)
-json_output = json.dumps(results, default=str)
+# Run specific module tests
+pytest tests/test_general_stats.py -v
+pytest tests/test_reference_ranges.py -v
+pytest tests/test_autocorrelated_timeseries.py -v
+pytest tests/test_utils.py -v
 ```
 
 ## Project Structure
 
 ```
-stats-calculator/
-├── stats_calculator/           
-│   ├── __init__.py              
-│   └── core.py                
-├── tests/                     
-│   ├── __init__.py
-│   └── test_stats.py          
-├── examples/                  
-│   └── example_usage.py 
-├── requirements.txt           
-├── requirements-dev.txt       
-└── README.md                  
+stats_calculator/
+├── __init__.py                    # Package imports and aliases
+├── general_stats.py              # Percentiles and IQR calculations
+├── reference_ranges.py           # Range and zone analysis functions
+├── autocorrelated_timeseries.py  # Time series with autocorrelation
+└── utils.py                      # Data cleaning and downsampling
+
+tests/
+├── __init__.py
+├── test_general_stats.py         # Tests for percentile functions
+├── test_reference_ranges.py      # Tests for range analysis
+├── test_autocorrelated_timeseries.py  # Tests for time series functions
+└── test_utils.py                 # Tests for utility functions
+
+requirements.txt                   # Production dependencies
+requirements-dev.txt              # Development dependencies
+README.md                         # This file
 ```
+
+## Dependencies
+
+- **numpy**: Array operations and mathematical functions
+- **pandas**: Data structures and time series handling
+- **scipy**: Statistical distributions for confidence intervals
+- **lttb**: Downsampling algorithm (optional, graceful fallback)
